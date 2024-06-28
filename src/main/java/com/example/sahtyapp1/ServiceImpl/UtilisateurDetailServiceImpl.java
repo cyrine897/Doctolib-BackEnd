@@ -31,7 +31,7 @@ public class UtilisateurDetailServiceImpl implements UtilisateurDetailService, U
 
 
 
-    @Autowired
+  /*  @Autowired
     private EmailService emailService;
 
     public void generateResetToken(String email) {
@@ -53,5 +53,5 @@ public class UtilisateurDetailServiceImpl implements UtilisateurDetailService, U
             return true;
         }
         return false;
-    }
+    }*/
 }

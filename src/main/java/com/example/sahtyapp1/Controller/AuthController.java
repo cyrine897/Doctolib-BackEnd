@@ -10,6 +10,8 @@ import com.example.sahtyapp1.Request.SignUpRequest;
 import com.example.sahtyapp1.Response.JwtResponse;
 import com.example.sahtyapp1.Response.MessageResponse;
 import com.example.sahtyapp1.Security.JwtUtils;
+import com.example.sahtyapp1.ServiceImpl.EmailService;
+import com.example.sahtyapp1.ServiceImpl.PasswordService;
 import com.example.sahtyapp1.ServiceImpl.UtilisateurDetailServiceImpl;
 import com.example.sahtyapp1.ServiceImpl.UtilisateurDetailsImpl;
 import jakarta.validation.Valid;
@@ -25,11 +27,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.HashSet;
@@ -56,10 +54,12 @@ public class AuthController {
     JwtUtils jwtUtils;
     @Autowired
     private UtilisateurDetailServiceImpl utilisateurDetailService;
+    @Autowired
+    private PasswordService passwordEncoderService;
 
 
 
-    public AuthController(UtilisateurRepo utilisateurRepo, RoleRepo roleRepo, PasswordEncoder passwordEncoder) {
+    public AuthController(UtilisateurRepo utilisateurRepo, RoleRepo roleRepo, PasswordEncoder passwordEncoder ) {
         this.utilisateurRepo = utilisateurRepo;
         this.roleRepo = roleRepo;
         this.passwordEncoder = passwordEncoder;
@@ -70,7 +70,7 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
         String email = request.get("email");
-        utilisateurDetailService.generateResetToken(email);
+        passwordEncoderService.generateResetToken(email);
         return ResponseEntity.ok("Reset token sent to your email.");
     }
 
@@ -78,7 +78,7 @@ public class AuthController {
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
         String token = request.get("token");
         String newPassword = request.get("newPassword");
-        if (utilisateurDetailService.resetPassword(token, newPassword)) {
+        if (passwordEncoderService.resetPassword(token, newPassword)) {
             return ResponseEntity.ok("Password successfully reset.");
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid token.");
@@ -258,5 +258,30 @@ public class AuthController {
 
 
 */
+
+
+    @Autowired
+    private EmailService emailService;
+
+    public void generateResetToken(String email) {
+        Utilisateur user = utilisateurRepo.findByEmail(email);
+        if (user != null) {
+            String token = UUID.randomUUID().toString();
+            user.setResetToken(token);
+            utilisateurRepo.save(user);
+            emailService.sendResetToken(email, token);
+        }
+    }
+
+    public boolean resetPassword(String token, String newPassword) {
+        Utilisateur user = utilisateurRepo.findByResetToken(token);
+        if (user != null) {
+            user.setPassword(newPassword); // Vous devriez hacher le mot de passe ici
+            user.setResetToken(null);
+            utilisateurRepo.save(user);
+            return true;
+        }
+        return false;
+    }
 
 }
